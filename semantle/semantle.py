@@ -1,0 +1,74 @@
+import time
+import os
+import gensim
+from gensim import utils
+import gensim.downloader as api
+from gensim.test.utils import common_texts
+from gensim.models import Word2Vec
+import csv
+
+class MyCorpus:
+    '''An iterator that yields sentences (lists of str).'''
+
+    def __iter__(self):
+        corpus_path = os.path.relpath('./data/simpsons_script_lines.csv')
+        with open(corpus_path, newline='') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter = ',', quotechar = '"')
+            for row in reader:
+                yield(row['normalized_text'].split())
+
+class Semantle:
+
+    def __init__(self):
+        # initialize model
+        # TODO: Figure out how to use GoogleNews300 model
+        # When loaded using gensim.downloader.load('word2vec-google-news-300') the model we get out is a KeyedVectors object, which doesn't work the same as a Word2Vec object
+        self.use_local = True
+        if self.use_local:
+            print("Using Simpsons")
+            self.corpus_name = "simpsons-script" # To start
+            self.sentences = MyCorpus()
+            self.model = gensim.models.Word2Vec(sentences = self.sentences, vector_size=300, min_count=5)
+            print(type(self.model))
+        self.word_of_the_day = 'school'
+        self.guesses_dict = {}
+        self.guesses_in_order = []
+        self.endgame = False
+    
+    def player_guess(self):
+        '''
+        Handles the user input for a guess.
+        '''
+        guess = input("Guess: ")
+        cleaned_guess = guess.lower()
+        return cleaned_guess
+
+    def take_turn(self):
+        '''
+        The core turn structure of the game.
+        '''
+        taking_guess = True
+        while taking_guess:     
+            current_guess = self.player_guess()
+            try:
+                similarity_of_current_guess = self.model.wv.similarity(current_guess, self.word_of_the_day)
+                taking_guess = False
+            except:
+                taking_guess = True
+        self.guesses_dict[current_guess] = similarity_of_current_guess
+        self.guesses_in_order.append(current_guess)
+        print(self.guesses)
+        self.update_game_state(current_guess)
+    
+    def update_game_state(self, current_guess):
+        self.endgame = current_guess == self.word_of_the_day
+    
+if __name__ == "__main__":
+    print("loading...")
+    ct = time.time()
+    semantle = Semantle()
+    ft = time.time()
+    print(f"Loaded in {ft - ct}")
+    while not semantle.endgame:
+        semantle.take_turn()
+
