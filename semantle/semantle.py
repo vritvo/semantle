@@ -85,7 +85,7 @@ class Semantle:
                 guess, self.word_of_the_day
             )
             return similarity_of_current_guess
-        except:
+        except Exception as _:
             return None
 
     def update_game_state(self, current_guess) -> None:
