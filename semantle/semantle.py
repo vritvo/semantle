@@ -1,39 +1,22 @@
-import time
 import os
 import gensim
-import csv
+import gensim.downloader
+from gensim.models import KeyedVectors
+from typing import cast
 
 ROOT_DIR = os.path.abspath(".")
 
-class MyCorpus:
-    """An iterator that yields sentences (lists of str)."""
-
-    def __iter__(self):
-        corpus_path = ROOT_DIR + "/semantle/data/simpsons_script_lines.csv"
-        with open(corpus_path, newline="") as csvfile:
-            reader = csv.DictReader(csvfile, delimiter=",", quotechar='"')
-            for row in reader:
-                yield (row["normalized_text"].split())
-
 
 class Semantle:
-
     def __init__(self):
-        # TODO: Figure out how to use GoogleNews300 model
-        # When loaded using gensim.downloader.load('word2vec-google-news-300') the model we get out is a KeyedVectors object, which doesn't work the same as a Word2Vec object
-        if not os.path.exists(ROOT_DIR + "/semantle/data/simpsons.model"):
-            self.sentences = MyCorpus()
-            self.model = gensim.models.Word2Vec(
-                sentences=self.sentences, vector_size=300, min_count=5
-            )
-            self.model.save(ROOT_DIR + "/semantle/data/simpsons.model")
-        else:
-            self.model = gensim.models.Word2Vec.load(
-                ROOT_DIR + "/semantle/data/simpsons.model"
-            )
+        # Load Google News Word2Vec model
+        print("Loading Google News Word2Vec model...")
+        self.model: KeyedVectors = cast(
+            KeyedVectors, gensim.downloader.load("word2vec-google-news-300")
+        )
 
         self.common_word_list = self.get_common_word_list()
-        self.word_of_the_day = "bart"
+        self.word_of_the_day = "computer"  # Changed from "bart" to a more common word
         self.guesses_dict = {}
         self.guesses_in_order = []
         self.endgame = False
@@ -64,12 +47,22 @@ class Semantle:
         Takes in the user's guess, updates the game log, and gives the
         player feedback on their guess.
         """
-        similarity_of_current_guess = None
+        # Use walrus operator (:=) to assign and evaluate current_guess in one expression
+        # The loop continues while TWO conditions are met:
+        # 1. current_guess := self.player_guess() - assigns user input to current_guess (always truthy for non-empty strings)
+        # 2. self.check_guess(current_guess) is None - checks if the guess is invalid (not in vocabulary)
+        #
+        # The loop will exit when check_guess returns a valid similarity score (not None),
+        # meaning the guessed word exists in the model's vocabulary
+        while (current_guess := self.player_guess()) and self.check_guess(
+            current_guess
+        ) is None:
+            pass  # Empty loop body - all logic is in the condition
 
-        while similarity_of_current_guess is None:
-            current_guess = self.player_guess()
-            similarity_of_current_guess = self.check_guess(current_guess)
+        # At this point, current_guess is guaranteed to be valid and have a similarity score
+        similarity_of_current_guess = self.check_guess(current_guess)
 
+        # Store the guess and its similarity score
         self.guesses_dict[current_guess] = similarity_of_current_guess
         self.guesses_in_order.append(current_guess)
         print(f"{current_guess}: {similarity_of_current_guess}")
@@ -81,7 +74,7 @@ class Semantle:
         is in the vocabulary of the game model.
         """
         try:
-            similarity_of_current_guess = self.model.wv.similarity(
+            similarity_of_current_guess = self.model.similarity(
                 guess, self.word_of_the_day
             )
             return similarity_of_current_guess
@@ -93,13 +86,3 @@ class Semantle:
         Sets the game state to end if the user guesses the correct word.
         """
         self.endgame = current_guess == self.word_of_the_day
-
-
-if __name__ == "__main__":
-    print("loading...")
-    ct = time.time()
-    semantle = Semantle()
-    ft = time.time()
-    print(f"Loaded in {ft - ct}")
-    while not semantle.endgame:
-        semantle.take_turn()

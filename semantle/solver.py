@@ -1,29 +1,41 @@
-from semantle import Semantle
+from semantle.semantle import Semantle
+from gensim.models import KeyedVectors
 
 
 class Solver:
-
     def __init__(self, semantle: Semantle):
         self.semantle = semantle
-        self.wv = semantle.model.wv
-        self.guesses = {"elementary": {}, "green": {}, "volume": {}}
+        self.wv: KeyedVectors = (
+            semantle.model
+        )  # Google News model is already a KeyedVectors object
+        self.guesses: dict[str, dict[str, bool]] = {
+            "elementary": {},
+            "green": {},
+            "volume": {},
+        }
         self.rounding_value = ".2f"
+        self.similarity_score: float  # Will be set by get_similarity_score
 
     def get_similarity_score(self, guessed_word: str) -> None:
         """
         Assigns the similarity score of a given guess to a variable.
         """
-        self.similarity_score = self.semantle.check_guess(guessed_word)
+        score = self.semantle.check_guess(guessed_word)
+        if score is None:
+            raise ValueError(f"Word '{guessed_word}' not found in vocabulary")
+        self.similarity_score = score
 
     def generate_vocab_distance_table(self, guessed_word: str) -> dict[str, str]:
         """
         Calculates the distances of a given word to every other word in the model vocabulary.
         """
-        vocab = self.wv.key_to_index
+        vocab_keys = list(self.wv.key_to_index.keys())
+        # Ensure all keys are strings (they should be in Word2Vec models)
+        vocab: list[str] = [str(key) for key in vocab_keys]
         distances = self.wv.distances(guessed_word)
-        assert len(vocab) == len(
-            distances
-        ), "vocab and vocab distances should be of equal length"
+        assert len(vocab) == len(distances), (
+            "vocab and vocab distances should be of equal length"
+        )
         vocab_distances = {
             v: format(d, self.rounding_value) for v, d in zip(vocab, distances)
         }
@@ -65,9 +77,5 @@ class Solver:
             if self.guesses[keys[1]].get(word) and self.guesses[keys[2]].get(word):
                 return word
 
-
-if __name__ == "__main__":
-    s = Solver(Semantle())
-    s.create_answer_table()
-    solution = s.identify_solution()
-    print(f"{solution} is the solution to today's Semantle")
+        # If no solution is found in the intersection, raise an error
+        raise ValueError("No solution found in the intersection of potential answers")
