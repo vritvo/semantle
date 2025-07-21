@@ -1,8 +1,7 @@
-from semantle import Semantle
+from semantle.semantle import Semantle
 
 
 class Solver:
-
     def __init__(self, semantle: Semantle):
         self.semantle = semantle
         self.wv = semantle.model.wv
@@ -21,9 +20,9 @@ class Solver:
         """
         vocab = self.wv.key_to_index
         distances = self.wv.distances(guessed_word)
-        assert len(vocab) == len(
-            distances
-        ), "vocab and vocab distances should be of equal length"
+        assert len(vocab) == len(distances), (
+            "vocab and vocab distances should be of equal length"
+        )
         vocab_distances = {
             v: format(d, self.rounding_value) for v, d in zip(vocab, distances)
         }
@@ -64,10 +63,3 @@ class Solver:
         for word in list(self.guesses[keys[0]]):
             if self.guesses[keys[1]].get(word) and self.guesses[keys[2]].get(word):
                 return word
-
-
-if __name__ == "__main__":
-    s = Solver(Semantle())
-    s.create_answer_table()
-    solution = s.identify_solution()
-    print(f"{solution} is the solution to today's Semantle")
