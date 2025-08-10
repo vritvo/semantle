@@ -30,25 +30,17 @@ def main():
     print("Initializing Semantle...")
     semantle = Semantle()
 
-
     if mode == "play":
         print("Play Game")
         semantle.play_game()
+        
     elif mode == "solve":
         print("Creating solver...")
         solver = Solver(semantle)
     
-        print("Analyzing potential answers...")
-        solver.create_answer_table()
-
-        print("Identifying solution...")
-        solution = solver.identify_solution()
-
-        if solution:
-            print(f"{solution} is the solution to today's Semantle")
-        else:
-            print("No solution found with the current guesses")
-
+        print("Starting solver...")
+        solution = solver.solve_game()
+        print(f"\n{solution} is the solution to today's Semantle!")
 
 if __name__ == "__main__":
     main()
